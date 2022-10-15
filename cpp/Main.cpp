@@ -62,7 +62,7 @@ int main(int argc , char** argv){
 
  // printf("result = %i\n", Compiler::interpretAst(n));
 
-  Compiler::freeAlloc();
+  Compiler::freeAllocs();
   Tokenizer.deinit();
 
   fps.close();

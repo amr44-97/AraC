@@ -98,7 +98,7 @@ AstType ToAstType(TokenType T);
 int interpretAst(Ast *Tree);
 
 void freeAst(Ast* T);
-void freeAlloc() ;
+void freeAllocs() ;
 
 
 
