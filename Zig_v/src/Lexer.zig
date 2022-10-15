@@ -415,9 +415,10 @@ pub fn nextToken(self: *Lexer) !Token {
             start = buf_index;
 
             while (std.ascii.isDigit(@intCast(u8, char))) {
-                buf_index += 1;
-                char = buf.items[buf_index];
+                //buf_index += 1;
+                char = next(self, 1); //buf.items[buf_index];
             }
+
             var ints: []const u21 = buf.items[start..buf_index];
             var tmps: [1000]u8 = undefined;
             var intu8 = tmps[0..ints.len];
@@ -426,6 +427,7 @@ pub fn nextToken(self: *Lexer) !Token {
             while (x < ints.len) : (x += 1) {
                 intu8[x] = @intCast(u8, ints[x]);
             }
+            buf_index -= 1;
             token.makeTok(Text{ .text = intu8 }, TokenType.Integer_Tok, try fmt.parseInt(u64, intu8, 10), buf_index);
         },
         else => {
