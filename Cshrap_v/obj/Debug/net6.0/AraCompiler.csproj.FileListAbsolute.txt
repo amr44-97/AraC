@@ -1,0 +1,15 @@
+/home/amr/AM/AraCompiler/bin/Debug/net6.0/AraCompiler
+/home/amr/AM/AraCompiler/bin/Debug/net6.0/AraCompiler.deps.json
+/home/amr/AM/AraCompiler/bin/Debug/net6.0/AraCompiler.runtimeconfig.json
+/home/amr/AM/AraCompiler/bin/Debug/net6.0/AraCompiler.dll
+/home/amr/AM/AraCompiler/bin/Debug/net6.0/AraCompiler.pdb
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/AraCompiler.csproj.AssemblyReference.cache
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/AraCompiler.GeneratedMSBuildEditorConfig.editorconfig
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/AraCompiler.AssemblyInfoInputs.cache
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/AraCompiler.AssemblyInfo.cs
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/AraCompiler.csproj.CoreCompileInputs.cache
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/AraCompiler.dll
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/refint/AraCompiler.dll
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/AraCompiler.pdb
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/AraCompiler.genruntimeconfig.cache
+/home/amr/AM/AraCompiler/obj/Debug/net6.0/ref/AraCompiler.dll

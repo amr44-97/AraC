@@ -1,0 +1,25 @@
+CC = zig c++
+
+CFLAGS = -Wall -Wextra -O2
+
+SRC = Main.cpp
+
+#LINK = ./Include/LibTypes.o ./Include/file_handle.o  Tokenizer.cpp Parser.cpp 
+
+OBJ =  ./Include/LibTypes.o ./Include/file_handle.o  Compiler.o  
+
+LINK  = Parser.cpp Tokenizer.cpp interpret.cpp Error.cpp Asm_Gen.cpp
+
+EXE = Ara
+
+#All = all
+
+all:
+	$(CC) $(CFLAGS) -c $(LINK) -o Compiler.o
+	$(CC) $(CFLAGS) $(OBJ) -o $(EXE) $(SRC)
+
+
+
+clean:
+	rm $(EXE)
+	rm Parser.o Tokenizer.o
