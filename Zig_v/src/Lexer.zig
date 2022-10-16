@@ -86,9 +86,9 @@ pub const TokenType = enum {
     String_Tok, // "Hello        مرحبا"
     Ident_Tok,
 };
-const Text = union {
-    text: []const u8,
-    string: []const u21,
+const Text = struct {
+    text: ?[]const u8 = null,
+    string: ?[]const u21 = null,
 };
 
 pub const Token = struct {
@@ -153,14 +153,18 @@ pub fn printTokens(self: *Lexer) !void {
         if (tok.Type == TokenType.Integer_Tok) {
             try Out.getStdOut().writer().print("{} -- {} -- [{d}]\n", .{ tok.Type, tok.position, tok.Intval.? });
         } else if (tok.Type == TokenType.String_Tok) {
-            try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string });
-            if (try utf.utf8CountCodepoints("أنا عمرو") == tok.text.string.len) {
-                try Out.getStdOut().writer().print("All Are Equal\n", .{});
-            }
+            try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string.? });
+            //  var amr = try toUtf(self.allocator, "أنا عمرو");
+            //  _ = amr;
         } else if (tok.Type == TokenType.Ident_Tok) {
-            try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string });
+            try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string.? });
+
+            const s = std.mem.eql(u21, tok.text.string.?, (try toUtf(self.allocator, "أساس")).UtfList.items);
+            if (s) {
+                try Out.getStdOut().writer().print(" كلمة أساس هنا\n", .{});
+            }
         } else {
-            try Out.getStdOut().writer().print("{} -- {} -- [{s}]\n", .{ tok.Type, tok.position, tok.text.text });
+            try Out.getStdOut().writer().print("{} -- {} -- [{s}]\n", .{ tok.Type, tok.position, tok.text.text.? });
         }
     }
 }
@@ -171,14 +175,11 @@ pub fn printBadTokens(self: *Lexer) !void {
             if (tok.Type == TokenType.Integer_Tok) {
                 try Out.getStdOut().writer().print("{} -- {} -- [{d}]\n", .{ tok.Type, tok.position, tok.Intval.? });
             } else if (tok.Type == TokenType.String_Tok) {
-                try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string });
-                if (try utf.utf8CountCodepoints("أنا عمرو") == tok.text.string.len) {
-                    try Out.getStdOut().writer().print("All Are Equal\n", .{});
-                }
+                try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string.? });
             } else if (tok.Type == TokenType.Ident_Tok) {
-                try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string });
+                try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string.? });
             } else {
-                try Out.getStdOut().writer().print("{} -- {} -- [{s}]\n", .{ tok.Type, tok.position, tok.text.text });
+                try Out.getStdOut().writer().print("{} -- {} -- [{s}]\n", .{ tok.Type, tok.position, tok.text.text.? });
             }
         }
     }
@@ -204,6 +205,8 @@ pub fn scan(self: *Lexer) !ArrayList(Token) {
 
 var tmplen: usize = 0;
 var start: usize = 0;
+var gbuf: []u8 = undefined;
+var tmp_gbuf: []u8 = undefined;
 
 pub fn peek(self: *Lexer, offset: usize) u21 {
     const len = self.UtfList.items.len;
@@ -437,13 +440,16 @@ pub fn nextToken(self: *Lexer) !Token {
             //token.makeTok("\"", TokenType.Double_quote_Tok, null, buf_index);
             char = next(self, 1);
             start = buf_index;
+
+            // var txtu8: text.items[start..buf_index] = undefined;
             while (utf.utf8ValidCodepoint(char) and char != '"') {
+                gbuf = try std.mem.concat(self.allocator, u8, &[_][]const u8{text.items[buf_index]});
                 char = next(self, 1);
             }
 
             var ints: []const u21 = buf.items[start..buf_index];
 
-            token.makeTok(Text{ .string = ints }, TokenType.String_Tok, null, buf_index);
+            token.makeTok(Text{ .string = ints, .text = gbuf }, TokenType.String_Tok, null, buf_index);
         },
 
         '\n' => {
@@ -454,23 +460,26 @@ pub fn nextToken(self: *Lexer) !Token {
             start = buf_index;
             while ((utf.utf8ValidCodepoint(char) and is_alpha(char) and char != ' ') or std.ascii.isDigit(@intCast(u8, char))) { //and char != ' ' and char != '"' and char != ';') {
 
+                gbuf = try std.mem.concat(self.allocator, u8, &[_][]const u8{text.items[buf_index]});
                 char = next(self, 1);
             }
             var ints: []const u21 = buf.items[start..buf_index];
-
             buf_index -= 1;
-            token.makeTok(Text{ .string = ints }, TokenType.Ident_Tok, null, buf_index);
+            token.makeTok(Text{ .string = ints, .text = gbuf }, TokenType.Ident_Tok, null, buf_index);
         },
         'ا', 'أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي', 'ء', 'ئ' => {
             start = buf_index;
+
             while ((utf.utf8ValidCodepoint(char) and is_arabic_char(char) and char != ' ') or char == '_' or std.ascii.isDigit(@intCast(u8, char))) { //and char != ' ' and char != '"' and char != ';') {
+
+                gbuf = try std.mem.concat(self.allocator, u8, &[_][]const u8{text.items[buf_index]});
                 char = next(self, 1);
             }
             var ints: []const u21 = buf.items[start..buf_index];
 
             buf_index -= 1;
             try Out.getStdOut().writer().print("All Are Equal\n", .{});
-            token.makeTok(Text{ .string = ints }, TokenType.Ident_Tok, null, buf_index);
+            token.makeTok(Text{ .string = ints, .text = gbuf }, TokenType.Ident_Tok, null, buf_index);
         },
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' => {
             start = buf_index;
