@@ -14,6 +14,7 @@ pub fn build(b: *std.build.Builder) void {
     const exe = b.addExecutable("Zig_v", "src/Main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
+
     exe.install();
 
     const run_cmd = exe.run();

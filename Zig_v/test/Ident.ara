@@ -1,0 +1,19 @@
+var name = "Ali ammmar";
+
+string ls = "Hello World";
+
+var _adds = 545;
+
+_adds = mul(4);
+
+"1314" + "9877" += "13"
+
+"12"*"09"/"4" = "?"
+
+"983" +="1"
+
+int main() {
+	printf("Helooo C++");
+	write(1,ls,len(ls));
+	return 0;
+}

@@ -3,7 +3,7 @@ const std = @import("std");
 const File = std.fs.File;
 const mem = std.mem;
 const fmt = std.fmt;
-const Out = std.io.getStdOut().writer();
+const Out = std.io;
 const utf = std.unicode;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allocator = gpa.allocator();
@@ -85,7 +85,7 @@ pub fn tokASt(Type: Lexer.TokenType) AstType {
 
 pub fn primaryExpression(self: *Parser) !?*AstNode {
     var node: ?*AstNode = null;
-    if (Current_token.Type == Lexer.TokenType.Number_Tok) {
+    if (Current_token.Type == Lexer.TokenType.Integer_Tok) {
         node = try makeAstleaf(Current_token, Current_token.Intval.?, AstType.Ast_INTLIT);
         Current_token = try self.nextToken();
         return node;
@@ -136,17 +136,17 @@ pub fn parseExpr(self: *Parser) !*AstNode {
 
 pub fn prettyprint(prefix: []const u8, Node: ?*Parser.AstNode, isLeft: bool) !void {
     if (Node != null) {
-        try Out.print("{s}", .{prefix});
+        try Out.getStdOut().writer().print("{s}", .{prefix});
         if (isLeft) {
-            try Out.print("├──", .{});
+            try Out.getStdOut().writer().print("├──", .{});
         } else {
-            try Out.print("└──", .{});
+            try Out.getStdOut().writer().print("└──", .{});
         }
 
         if (Node.?.op == AstType.Ast_INTLIT) {
-            try Out.print("({})\n", .{Node.?.Intval.?});
+            try Out.getStdOut().writer().print("({})\n", .{Node.?.Intval.?});
         } else {
-            try Out.print("({s})\n", .{Node.?.tok.text});
+            try Out.getStdOut().writer().print("({s})\n", .{Node.?.tok.text.text});
         }
 
         //       if (isLeft) {
