@@ -20,7 +20,6 @@ pub fn main() !void {
     var fp: File = try std.fs.cwd().openFile(arg.?, .{ .mode = .read_write });
     const fp_s = try fp.getEndPos();
     var txtbuf = try fp.readToEndAlloc(allocator, fp_s);
-
     var Parse = try Parser.init(allocator, txtbuf);
     defer Parse.deinit();
 
