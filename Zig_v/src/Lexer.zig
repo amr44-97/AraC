@@ -17,8 +17,9 @@ TokenList: ArrayList(Token) = undefined,
 var Iter: utf.Utf8Iterator = undefined;
 
 var buf_index: usize = 0;
+var glob_Line: usize = 1;
 
-pub const TokenType = enum {
+pub const TokenType = enum(u21) {
     Bad_Tok, // ?
     Eof_Tok, // eof
     WhiteSpace_Tok, // " "
@@ -30,7 +31,9 @@ pub const TokenType = enum {
     Pipe_Tok, // |
     Pipe_Pipe_Tok, // ||
     Semi_Colon_Tok, // ;
+    Ara_Semi_Colon, // ؛
     Not_Eql_Tok, // !=
+    Byte_Order_Mark_Tok = 65279,
 
     AND_Tok, // &
     AND_Equal_Tok, // &=
@@ -95,6 +98,7 @@ pub const Token = struct {
     Type: TokenType,
     Intval: ?u64 = null,
     position: usize = 0,
+    Line: usize = 0,
     buffer: ArrayList(u21),
     text: Text,
 
@@ -103,6 +107,7 @@ pub const Token = struct {
         self.text = Text_t;
         self.Intval = intval;
         self.position = pos;
+        self.Line = glob_Line;
     }
 };
 
@@ -143,28 +148,27 @@ pub fn init(Alloc: std.mem.Allocator, buf: []const u8) !Lexer {
 pub fn deinit(self: *Lexer) void {
     self.u8List.deinit();
     self.UtfList.deinit();
-
-    //try Out.getStdOut().writer().print("cap = {}\n", .{self.TokenList.capacity});
+    // TODO free the Tree of tokens
     self.TokenList.deinit();
 }
 
 pub fn printTokens(self: *Lexer) !void {
     for (self.TokenList.items) |tok| {
         if (tok.Type == TokenType.Integer_Tok) {
-            try Out.getStdOut().writer().print("{} -- {} -- [{d}]\n", .{ tok.Type, tok.position, tok.Intval.? });
+            try Out.getStdOut().writer().print("{s} -- [{},{}] -- [{d}]\n", .{ @tagName(tok.Type), tok.Line, tok.position, tok.Intval.? });
         } else if (tok.Type == TokenType.String_Tok) {
-            try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string.? });
+            try Out.getStdOut().writer().print("{s} -- [{},{}] -- [{u}]\n", .{ @tagName(tok.Type), tok.Line, tok.position, tok.text.string.? });
             //  var amr = try toUtf(self.allocator, "أنا عمرو");
             //  _ = amr;
         } else if (tok.Type == TokenType.Ident_Tok) {
-            try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string.? });
+            try Out.getStdOut().writer().print("{s} -- [{},{}] -- [{u}]\n", .{ @tagName(tok.Type), tok.Line, tok.position, tok.text.string.? });
 
             const s = std.mem.eql(u21, tok.text.string.?, (try toUtf(self.allocator, "أساس")).UtfList.items);
             if (s) {
                 try Out.getStdOut().writer().print(" كلمة أساس هنا\n", .{});
             }
         } else {
-            try Out.getStdOut().writer().print("{} -- {} -- [{s}]\n", .{ tok.Type, tok.position, tok.text.text.? });
+            try Out.getStdOut().writer().print("{s} -- [{},{}] -- [{s}]\n", .{ @tagName(tok.Type), tok.Line, tok.position, tok.text.text.? });
         }
     }
 }
@@ -172,15 +176,7 @@ pub fn printTokens(self: *Lexer) !void {
 pub fn printBadTokens(self: *Lexer) !void {
     for (self.TokenList.items) |tok| {
         if (tok.Type == TokenType.Bad_Tok) {
-            if (tok.Type == TokenType.Integer_Tok) {
-                try Out.getStdOut().writer().print("{} -- {} -- [{d}]\n", .{ tok.Type, tok.position, tok.Intval.? });
-            } else if (tok.Type == TokenType.String_Tok) {
-                try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string.? });
-            } else if (tok.Type == TokenType.Ident_Tok) {
-                try Out.getStdOut().writer().print("{} -- {} -- [{u}]\n", .{ tok.Type, tok.position, tok.text.string.? });
-            } else {
-                try Out.getStdOut().writer().print("{} -- {} -- [{s}]\n", .{ tok.Type, tok.position, tok.text.text.? });
-            }
+            try Out.getStdOut().writer().print("{} -- [{},{}] -- [{d}]\n", .{ tok.Type, tok.Line, tok.position, tok.text.string.? });
         }
     }
 }
@@ -248,8 +244,8 @@ pub fn is_arabic_char(Cj: u21) bool {
 }
 
 pub fn nextToken(self: *Lexer) !Token {
-    var buf: ArrayList(u21) = self.UtfList; //try toUtf(self.allocator, self.buffer);
-    var text: ArrayList([]const u8) = self.u8List; //try toUtf(self.allocator, self.ubuffer);
+    var buf: ArrayList(u21) = self.UtfList;
+    var text: ArrayList([]const u8) = self.u8List;
     const len = buf.items.len;
     var token: Token = undefined;
 
@@ -300,7 +296,6 @@ pub fn nextToken(self: *Lexer) !Token {
                 else => token.makeTok(Text{ .text = text_buf }, TokenType.Minus_Tok, null, buf_index),
             }
         },
-
         '=' => {
             switch (peek(self, 1)) {
                 '=' => {
@@ -425,6 +420,9 @@ pub fn nextToken(self: *Lexer) !Token {
         ';' => {
             token.makeTok(Text{ .text = ";" }, TokenType.Semi_Colon_Tok, null, buf_index);
         },
+        '؛' => {
+            token.makeTok(Text{ .text = "؛" }, TokenType.Semi_Colon_Tok, null, buf_index);
+        },
         '}' => {
             token.makeTok(Text{ .text = "}" }, TokenType.Close_Brace_Tok, null, buf_index);
         },
@@ -437,11 +435,9 @@ pub fn nextToken(self: *Lexer) !Token {
         },
 
         '"' => {
-            //token.makeTok("\"", TokenType.Double_quote_Tok, null, buf_index);
             char = next(self, 1);
             start = buf_index;
 
-            // var txtu8: text.items[start..buf_index] = undefined;
             while (utf.utf8ValidCodepoint(char) and char != '"') {
                 gbuf = try std.mem.concat(self.allocator, u8, &[_][]const u8{text.items[buf_index]});
                 char = next(self, 1);
@@ -454,6 +450,7 @@ pub fn nextToken(self: *Lexer) !Token {
 
         '\n' => {
             token.makeTok(Text{ .text = "\\n" }, TokenType.newline_Tok, null, buf_index);
+            glob_Line += 1;
         },
         '_', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'x', 'v', 'w', 'y', 'z' => {
             //   char = next(self, 1);
@@ -470,18 +467,19 @@ pub fn nextToken(self: *Lexer) !Token {
         'ا', 'أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي', 'ء', 'ئ' => {
             start = buf_index;
 
-            while ((utf.utf8ValidCodepoint(char) and is_arabic_char(char) and char != ' ') or char == '_' or std.ascii.isDigit(@intCast(u8, char))) { //and char != ' ' and char != '"' and char != ';') {
-
+            while ((utf.utf8ValidCodepoint(char) and is_arabic_char(char) and char != ' ') or char == '_' or std.ascii.isDigit(@intCast(u8, char))) {
                 gbuf = try std.mem.concat(self.allocator, u8, &[_][]const u8{text.items[buf_index]});
                 char = next(self, 1);
             }
             var ints: []const u21 = buf.items[start..buf_index];
 
             buf_index -= 1;
-            try Out.getStdOut().writer().print("All Are Equal\n", .{});
             token.makeTok(Text{ .string = ints, .text = gbuf }, TokenType.Ident_Tok, null, buf_index);
         },
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' => {
+        @enumToInt(TokenType.Byte_Order_Mark_Tok) => {
+            token.makeTok(Text{ .text = "Byte_Order_Mark" }, TokenType.Byte_Order_Mark_Tok, null, buf_index);
+        },
+        '0'...'9' => {
             start = buf_index;
 
             while (std.ascii.isDigit(@intCast(u8, char))) {
@@ -497,11 +495,12 @@ pub fn nextToken(self: *Lexer) !Token {
             while (x < ints.len) : (x += 1) {
                 intu8[x] = @intCast(u8, ints[x]);
             }
+
             buf_index -= 1;
             token.makeTok(Text{ .text = intu8 }, TokenType.Integer_Tok, try fmt.parseInt(u64, intu8, 10), buf_index);
         },
         else => {
-            token.makeTok(Text{ .text = text_buf }, TokenType.Bad_Tok, null, buf_index);
+            token.makeTok(Text{ .text = text_buf, .string = (try toUtf(self.allocator, text_buf)).UtfList.items }, TokenType.Bad_Tok, null, buf_index);
         },
     }
     buf_index += 1;
